@@ -1,5 +1,8 @@
+use std::cmp::max;
 use std::collections::HashSet;
 use std::collections::VecDeque;
+use std::ops::Add;
+use std::ops::Sub;
 
 fn day01() {
     let input = include_str!("1.txt");
@@ -34,7 +37,7 @@ fn win_multiplier(theirs: i8, ours: i8) -> i8 {
 }
 
 fn score(theirs: i8, ours: i8) -> i32 {
-    return (win_multiplier(theirs, ours) * 3 + (ours + 1)) as i32;
+    (win_multiplier(theirs, ours) * 3 + (ours + 1)) as i32
 }
 
 fn pick_play(theirs: i8, ours: i8) -> (i8, i8) {
@@ -492,6 +495,138 @@ fn day08() {
     println!("d08p2: {}", scenic_scores.iter().max().unwrap());
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct Coord {
+    x: i32,
+    y: i32,
+}
+
+impl Add for Coord {
+    type Output = Coord;
+
+    fn add(self, _rhs: Coord) -> Coord {
+        Coord {
+            x: self.x + _rhs.x,
+            y: self.y + _rhs.y,
+        }
+    }
+}
+
+impl Coord {
+    fn distance(self, other: Coord) -> i32 {
+        let d1 = (self.x - other.x).abs();
+        let d2 = (self.y - other.y).abs();
+        max(d1, d2)
+    }
+
+    fn to_unit(self) -> Coord {
+        Coord {
+            x: if self.x > 0 {
+                1
+            } else if self.x < 0 {
+                -1
+            } else {
+                0
+            },
+            y: if self.y > 0 {
+                1
+            } else if self.y < 0 {
+                -1
+            } else {
+                0
+            },
+        }
+    }
+}
+
+impl Sub for Coord {
+    type Output = Coord;
+
+    fn sub(self, _rhs: Coord) -> Coord {
+        Coord {
+            x: self.x - _rhs.x,
+            y: self.y - _rhs.y,
+        }
+    }
+}
+
+#[allow(dead_code)]
+struct Move {
+    direction: Coord,
+    number_of_steps: i32,
+}
+
+fn day09() {
+    let input = include_str!("9.txt");
+
+    let mut head = Coord { x: 0, y: 0 };
+    let mut tail = Coord { x: 0, y: 0 };
+
+    let mut tail_visited: Vec<Coord> = Vec::new();
+    tail_visited.push(tail);
+    let mut moves: Vec<Move> = Vec::new();
+
+    for line in input.lines() {
+        let tmp: Vec<&str> = line.split(' ').collect();
+        let direction = match tmp[0] {
+            "R" => Coord { x: 1, y: 0 },
+            "U" => Coord { x: 0, y: 1 },
+            "L" => Coord { x: -1, y: 0 },
+            "D" => Coord { x: 0, y: -1 },
+            _ => panic!["Parsed unknown direction: {}", tmp[0]],
+        };
+
+        moves.push(Move {
+            direction,
+            number_of_steps: tmp[1].parse::<i32>().unwrap(),
+        });
+    }
+
+    for m in &moves {
+        for _ in 0..m.number_of_steps {
+            head = head + m.direction;
+            if head.distance(tail) > 1 {
+                tail = tail + (head - tail).to_unit();
+                if !tail_visited.contains(&tail) {
+                    tail_visited.push(tail);
+                }
+            }
+        }
+    }
+
+    println!("d09p1: {}", tail_visited.len());
+
+    let mut knots: Vec<Coord> = Vec::new();
+    for _ in 0..10 {
+        knots.push(Coord { x: 0, y: 0 });
+    }
+
+    let mut tail_visited: Vec<Coord> = Vec::new();
+    tail_visited.push(knots[0]);
+
+    for m in &moves {
+        for _ in 0..m.number_of_steps {
+            knots[0] = knots[0] + m.direction;
+            for i in 1..knots.len() {
+                if knots[i - 1].distance(knots[i]) > 1 {
+                    knots[i] = knots[i] + (knots[i - 1] - knots[i]).to_unit();
+                }
+            }
+            if !tail_visited.contains(&knots[knots.len() - 1]) {
+                tail_visited.push(knots[knots.len() - 1]);
+            }
+        }
+    }
+
+    println!("d09p2: {}", tail_visited.len());
+}
+
+fn day10() {
+    let input = include_str!("10.txt");
+    println!("{}", input);
+}
+
 fn main() {
     day01();
     day02();
@@ -501,4 +636,6 @@ fn main() {
     day06();
     day07();
     day08();
+    day09();
+    day10();
 }
