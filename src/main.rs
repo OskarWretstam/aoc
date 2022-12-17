@@ -624,7 +624,82 @@ fn day09() {
 
 fn day10() {
     let input = include_str!("10.txt");
-    println!("{}", input);
+    let mut x = 1;
+    let mut signal: Vec<i32> = Vec::new();
+    let mut cycle = 0;
+    let mut to_add;
+    let stops = vec![20, 60, 100, 140, 180, 220];
+    let mut stop_ix = 0;
+
+    for line in input.lines() {
+        match line {
+            "noop" => {
+                cycle += 1;
+                to_add = 0;
+            }
+            _ => {
+                cycle += 2;
+                let tmp: Vec<&str> = line.split(' ').collect();
+                to_add = tmp[1].parse::<i32>().unwrap();
+            }
+        };
+
+        if stop_ix < stops.len() && cycle >= stops[stop_ix] {
+            signal.push(stops[stop_ix] * x);
+            x += to_add;
+            stop_ix += 1;
+        } else {
+            x += to_add;
+        }
+    }
+
+    println!("d10p1: {}", signal.into_iter().sum::<i32>());
+
+    x = 1;
+    cycle = 0;
+    let mut pixels: Vec<char> = Vec::new();
+
+    for line in input.lines() {
+        match line {
+            "noop" => {
+                if cycle >= x - 1 && cycle <= x + 1 {
+                    pixels.push('#');
+                } else {
+                    pixels.push('.');
+                }
+                cycle += 1;
+                cycle %= 40;
+            }
+            _ => {
+                if cycle >= x - 1 && cycle <= x + 1 {
+                    pixels.push('#');
+                } else {
+                    pixels.push('.');
+                }
+                cycle += 1;
+                cycle %= 40;
+
+                if cycle >= x - 1 && cycle <= x + 1 {
+                    pixels.push('#');
+                } else {
+                    pixels.push('.');
+                }
+                cycle += 1;
+                cycle %= 40;
+
+                let tmp: Vec<&str> = line.split(' ').collect();
+                x += tmp[1].parse::<i32>().unwrap();
+            }
+        }
+    }
+
+    println!("d10p2:");
+    for j in 0..6 {
+        for i in 0..40 {
+            print!("{}", pixels[(j * 40) + i]);
+        }
+        println!();
+    }
 }
 
 fn main() {
