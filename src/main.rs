@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::ops::Add;
@@ -496,7 +497,7 @@ fn day08() {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Coord {
     x: i32,
     y: i32,
@@ -878,6 +879,107 @@ fn day11() {
     println!("d11p2: {}", p2[0] * p2[1]);
 }
 
+fn sign(x: i32, y: i32) -> i32 {
+    if y - x > 0 {
+        1
+    } else if y - x < 0 {
+        -1
+    } else {
+        0
+    }
+}
+
+fn day14() {
+    let input: Vec<Vec<Coord>> = include_str!("14.txt")
+        .lines()
+        .map(|line| {
+            line.split(" -> ")
+                .collect::<Vec<&str>>()
+                .into_iter()
+                .map(|coord| {
+                    let tmp = coord.split(',').collect::<Vec<&str>>();
+                    Coord {
+                        x: tmp[0].parse::<i32>().unwrap(),
+                        y: tmp[1].parse::<i32>().unwrap(),
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
+    let mut largest_y = 0;
+    let mut blocked: HashMap<Coord, bool> = std::collections::HashMap::new();
+    for row in input {
+        for i in 0..row.len() - 1 {
+            let step = Coord {
+                x: sign(row[i].x, row[i + 1].x),
+                y: sign(row[i].y, row[i + 1].y),
+            };
+
+            let mut tmp = row[i];
+            while tmp != row[i + 1] {
+                blocked.insert(tmp, true);
+                if tmp.y > largest_y {
+                    largest_y = tmp.y;
+                }
+                tmp = tmp + step;
+            }
+            blocked.insert(tmp, true);
+            if tmp.y > largest_y {
+                largest_y = tmp.y;
+            }
+        }
+    }
+
+    const DOWN: Coord = Coord { x: 0, y: 1 };
+    const LEFT: Coord = Coord { x: -1, y: 1 };
+    const RIGHT: Coord = Coord { x: 1, y: 1 };
+
+    let mut p1_done = false;
+    let mut p1 = 0;
+    let floor = largest_y + 2;
+    let mut added_sand = 0;
+    loop {
+        let mut sand = Coord { x: 500, y: 0 };
+        added_sand += 1;
+
+        loop {
+            let mut moved = false;
+            if !blocked.contains_key(&(sand + DOWN)) {
+                sand = sand + DOWN;
+                moved = true;
+            } else if !blocked.contains_key(&(sand + LEFT)) {
+                sand = sand + LEFT;
+                moved = true;
+            } else if !blocked.contains_key(&(sand + RIGHT)) {
+                sand = sand + RIGHT;
+                moved = true;
+            }
+
+            if !moved && sand.y == 0 {
+                break;
+            }
+
+            if !moved || sand.y == floor - 1 {
+                blocked.insert(sand, true);
+                break;
+            }
+
+            if sand.y == largest_y && !p1_done {
+                p1 = added_sand - 1;
+                p1_done = true;
+            }
+        }
+
+        if sand.y == 0 {
+            break;
+        }
+    }
+
+    println!("d14p1: {}", p1);
+    println!("d14p2: {}", added_sand);
+}
+
 fn main() {
     day01();
     day02();
@@ -890,4 +992,7 @@ fn main() {
     day09();
     day10();
     day11();
+    // day12() pathfinding algorithm
+    // day13() recursive decent, json parser
+    day14();
 }
