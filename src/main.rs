@@ -980,6 +980,81 @@ fn day14() {
     println!("d14p2: {}", added_sand);
 }
 
+// fn day17() {
+//     let _input: Vec<char> = include_str!("17.txt").trim().chars().collect();
+//
+//     println!("d17p1: {}", 0);
+//     println!("d17p2: {}", 0);
+// }
+
+#[allow(dead_code)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+struct Coord3D {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+impl Add for Coord3D {
+    type Output = Coord3D;
+
+    fn add(self, _rhs: Coord3D) -> Coord3D {
+        Coord3D {
+            x: self.x + _rhs.x,
+            y: self.y + _rhs.y,
+            z: self.z + _rhs.z,
+        }
+    }
+}
+
+fn day18() {
+    let input: HashMap<Coord3D, bool> = include_str!("18.txt")
+        .lines()
+        .map(|line| {
+            let tmp: Vec<&str> = line.split(',').collect();
+
+            (
+                Coord3D {
+                    x: tmp[0].parse::<i32>().unwrap(),
+                    y: tmp[1].parse::<i32>().unwrap(),
+                    z: tmp[2].parse::<i32>().unwrap(),
+                },
+                true,
+            )
+        })
+        .collect();
+
+    let permutations: Vec<Coord3D> = vec![
+        Coord3D { x: 1, y: 0, z: 0 },
+        Coord3D { x: 0, y: 1, z: 0 },
+        Coord3D { x: 0, y: 0, z: 1 },
+        Coord3D { x: -1, y: 0, z: 0 },
+        Coord3D { x: 0, y: -1, z: 0 },
+        Coord3D { x: 0, y: 0, z: -1 },
+    ];
+
+    let mut surface_area_p1 = 0;
+    for coord in input.keys() {
+        for permutation in &permutations {
+            if !input.contains_key(&(*coord + *permutation)) {
+                surface_area_p1 += 1;
+            }
+        }
+    }
+
+    let mut surface_area_p2 = 0;
+    for coord in input.keys() {
+        for permutation in &permutations {
+            if !input.contains_key(&(*coord + *permutation)) {
+                surface_area_p2 += 1;
+            }
+        }
+    }
+
+    println!("d18p1: {}", surface_area_p1);
+    println!("d18p2: {}", surface_area_p2);
+}
+
 fn main() {
     day01();
     day02();
@@ -995,4 +1070,8 @@ fn main() {
     // day12() pathfinding algorithm
     // day13() recursive decent, json parser
     day14();
+    // day15() some kind of interval overlap in 2D
+    // day16() don't know yet, can I always go to largest?
+    // day17() tetris!
+    day18();
 }
