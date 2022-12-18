@@ -702,6 +702,182 @@ fn day10() {
     }
 }
 
+// #[allow(dead_code)]
+// struct Monkey<F, G>
+// where
+//     F: Fn(i32) -> i32,
+//     G: Fn(i32) -> i32,
+// {
+//     items: VecDeque<i32>,
+//     operation: F,
+//     test: G,
+// }
+//
+// impl<F, G> Monkey<F, G>
+// where
+//     F: Fn(i32) -> i32,
+//     G: Fn(i32) -> i32,
+// {
+//     fn new(items: VecDeque<i32>, operation: F, test: G) -> Self {
+//         Self {
+//             items,
+//             operation,
+//             test,
+//         }
+//     }
+// }
+
+#[allow(dead_code)]
+struct Monkey {
+    items: VecDeque<usize>,
+    inspection_count: usize,
+    pub operation: Box<dyn Fn(usize) -> usize>,
+    pub test: Box<dyn Fn(usize) -> usize>,
+}
+
+#[allow(dead_code)]
+impl Monkey {
+    fn new(
+        items: VecDeque<usize>,
+        inspection_count: usize,
+        operation: impl Fn(usize) -> usize + 'static,
+        test: impl Fn(usize) -> usize + 'static,
+    ) -> Self {
+        Self {
+            items,
+            inspection_count,
+            operation: Box::new(operation),
+            test: Box::new(test),
+        }
+    }
+}
+
+fn parse_initial_monkeys(input: Vec<&'static str>) -> (Vec<Monkey>, usize) {
+    let mut monkeys = Vec::new();
+    let mut worry_level_limiter: usize = 1;
+    // Parse..
+    for monkey in input {
+        let mut iter = monkey.lines();
+        iter.next().unwrap(); // Monkey numbers, don't care
+
+        let starting_items = iter
+            .next()
+            .unwrap()
+            .trim()
+            .split(' ')
+            .skip_while(|word| word.chars().next().unwrap().is_alphabetic())
+            .map(|word| word.replace(',', ""))
+            .map(|word| word.parse::<usize>().unwrap());
+
+        // Construct closure for operation
+        let tmp: Vec<&str> = iter
+            .next()
+            .unwrap()
+            .trim()
+            .split(' ')
+            .skip_while(|word| word.chars().next().unwrap().is_alphabetic())
+            .collect();
+
+        let operation: Box<dyn Fn(usize) -> usize> = match tmp[tmp.len() - 2] {
+            "+" => {
+                if tmp[tmp.len() - 1] == "old" {
+                    Box::new(|worry_level: usize| worry_level + worry_level)
+                } else {
+                    Box::new(move |worry_level: usize| {
+                        worry_level + tmp[tmp.len() - 1].parse::<usize>().unwrap()
+                    })
+                }
+            }
+            "*" => {
+                if tmp[tmp.len() - 1] == "old" {
+                    Box::new(|worry_level: usize| worry_level * worry_level)
+                } else {
+                    Box::new(move |worry_level: usize| {
+                        worry_level * tmp[tmp.len() - 1].parse::<usize>().unwrap()
+                    })
+                }
+            }
+            _ => {
+                panic!("Operation: unknown operand {}", tmp[tmp.len() - 2])
+            }
+        };
+
+        // Construct closure for test
+        let tmp: Vec<usize> = iter
+            .map(|line| line.trim())
+            .map(|line| {
+                let words: Vec<&str> = line.split(' ').collect();
+                words[words.len() - 1].parse::<usize>().unwrap()
+            })
+            .collect();
+
+        worry_level_limiter *= tmp[0];
+
+        let test = Box::new(move |worry_level| {
+            if worry_level % tmp[0] == 0 {
+                tmp[1]
+            } else {
+                tmp[2]
+            }
+        });
+
+        monkeys.push(Monkey {
+            items: VecDeque::from_iter(starting_items),
+            inspection_count: 0,
+            operation,
+            test,
+        });
+    }
+    (monkeys, worry_level_limiter)
+}
+
+fn day11() {
+    let input: Vec<&str> = include_str!("11.txt").split("\n\n").collect();
+    let (mut monkeys_p1, _) = parse_initial_monkeys(input);
+    for _ in 0..20 {
+        for i in 0..monkeys_p1.len() {
+            while let Some(mut item) = monkeys_p1[i].items.pop_front() {
+                monkeys_p1[i].inspection_count += 1;
+                item = (monkeys_p1[i].operation)(item);
+                item /= 3;
+                let ix = (monkeys_p1[i].test)(item);
+                monkeys_p1[ix].items.push_back(item);
+            }
+        }
+    }
+
+    let mut p1: Vec<usize> = monkeys_p1
+        .iter()
+        .map(|monkey| monkey.inspection_count)
+        .collect::<Vec<usize>>();
+    p1.sort_by(|a, b| b.cmp(a));
+
+    println!("d11p1: {}", p1[0] * p1[1]);
+
+    let input: Vec<&str> = include_str!("11.txt").split("\n\n").collect();
+
+    let (mut monkeys_p2, worry_level_limiter) = parse_initial_monkeys(input);
+    for _ in 0..10000 {
+        for i in 0..monkeys_p2.len() {
+            while let Some(mut item) = monkeys_p2[i].items.pop_front() {
+                monkeys_p2[i].inspection_count += 1;
+                item = (monkeys_p2[i].operation)(item);
+                item %= worry_level_limiter;
+                let ix = (monkeys_p2[i].test)(item);
+                monkeys_p2[ix].items.push_back(item);
+            }
+        }
+    }
+
+    let mut p2: Vec<usize> = monkeys_p2
+        .iter()
+        .map(|monkey| monkey.inspection_count)
+        .collect::<Vec<usize>>();
+    p2.sort_by(|a, b| b.cmp(a));
+
+    println!("d11p2: {}", p2[0] * p2[1]);
+}
+
 fn main() {
     day01();
     day02();
@@ -713,4 +889,5 @@ fn main() {
     day08();
     day09();
     day10();
+    day11();
 }
