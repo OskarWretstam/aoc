@@ -1008,16 +1008,48 @@ impl Add for Coord3D {
 }
 
 fn day18() {
+    let mut min = Coord3D {
+        x: 20,
+        y: 20,
+        z: 20,
+    };
+
+    let mut max = Coord3D { x: 0, y: 0, z: 0 };
+
     let input: HashMap<Coord3D, bool> = include_str!("18.txt")
         .lines()
         .map(|line| {
             let tmp: Vec<&str> = line.split(',').collect();
 
+            let tmpx = tmp[0].parse::<i32>().unwrap();
+            let tmpy = tmp[1].parse::<i32>().unwrap();
+            let tmpz = tmp[2].parse::<i32>().unwrap();
+
+            if tmpx > max.x {
+                max.x = tmpx;
+            }
+            if tmpy > max.y {
+                max.y = tmpy;
+            }
+            if tmpz > max.z {
+                max.z = tmpz;
+            }
+
+            if tmpx < min.x {
+                min.x = tmpx;
+            }
+            if tmpy < min.y {
+                min.y = tmpy;
+            }
+            if tmpz < min.z {
+                min.z = tmpz;
+            }
+
             (
                 Coord3D {
-                    x: tmp[0].parse::<i32>().unwrap(),
-                    y: tmp[1].parse::<i32>().unwrap(),
-                    z: tmp[2].parse::<i32>().unwrap(),
+                    x: tmpx,
+                    y: tmpy,
+                    z: tmpz,
                 },
                 true,
             )
@@ -1043,10 +1075,44 @@ fn day18() {
     }
 
     let mut surface_area_p2 = 0;
-    for coord in input.keys() {
+
+    min = min
+        + Coord3D {
+            x: -1,
+            y: -1,
+            z: -1,
+        };
+
+    max = max + Coord3D { x: 1, y: 1, z: 1 };
+
+    // Act like steam in description and fill everything not blocked by rock
+    let mut coords_to_visit: VecDeque<Coord3D> = VecDeque::new();
+    coords_to_visit.push_back(min);
+    let mut coords_visited: HashMap<Coord3D, bool> = HashMap::new();
+
+    while let Some(coord) = coords_to_visit.pop_front() {
+        if coords_visited.contains_key(&coord) {
+            continue;
+        }
+
+        coords_visited.insert(coord, false);
+
         for permutation in &permutations {
-            if !input.contains_key(&(*coord + *permutation)) {
-                surface_area_p2 += 1;
+            let next_coord = coord + *permutation;
+            if next_coord.x >= min.x
+                && next_coord.x <= max.x
+                && next_coord.y >= min.y
+                && next_coord.y <= max.y
+                && next_coord.z >= min.z
+                && next_coord.z <= max.z
+            {
+                if input.contains_key(&next_coord) {
+                    surface_area_p2 += 1;
+                }
+                else
+                {
+                    coords_to_visit.push_back(next_coord);
+                }
             }
         }
     }
