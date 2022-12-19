@@ -14,11 +14,11 @@ fn day01() {
     for line in input.lines() {
         let val = line.parse::<i32>();
 
-        if val.is_err() {
+        if let Ok(value) = val {
+            tmp += value;
+        } else {
             calories.push(tmp);
             tmp = 0;
-        } else {
-            tmp = tmp + val.unwrap();
         }
     }
 
@@ -190,8 +190,8 @@ fn day05() {
 
     for line in input.lines() {
         if line.contains(" 1  ") {
-            for i in 0..stacks.len() {
-                stacks[i].reverse();
+            for stack in &mut stacks {
+                stack.reverse();
             }
             break;
         }
@@ -224,8 +224,8 @@ fn day05() {
     }
 
     print!("d05p1: ");
-    for i in 0..stacks.len() {
-        print!("{}", p1_stacks[i].last().unwrap());
+    for stack in p1_stacks {
+        print!("{}", stack.last().unwrap());
     }
     println!();
 
@@ -251,8 +251,8 @@ fn day05() {
     }
 
     print!("d05p2: ");
-    for i in 0..stacks.len() {
-        print!("{}", p2_stacks[i].last().unwrap());
+    for stack in p2_stacks {
+        print!("{}", stack.last().unwrap());
     }
     println!();
 }
@@ -496,6 +496,14 @@ fn day08() {
     println!("d08p2: {}", scenic_scores.iter().max().unwrap());
 }
 
+fn sign(x: i32) -> i32 {
+    match x {
+        x if x > 0 => 1,
+        x if x < 0 => -1,
+        _ => 0,
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Coord {
@@ -523,20 +531,8 @@ impl Coord {
 
     fn to_unit(self) -> Coord {
         Coord {
-            x: if self.x > 0 {
-                1
-            } else if self.x < 0 {
-                -1
-            } else {
-                0
-            },
-            y: if self.y > 0 {
-                1
-            } else if self.y < 0 {
-                -1
-            } else {
-                0
-            },
+            x: sign(self.x),
+            y: sign(self.y),
         }
     }
 }
@@ -956,14 +952,6 @@ fn day12() {
     println!("d12p2: {}", lengths.iter().min().unwrap());
 }
 
-fn sign(x: i32, y: i32) -> i32 {
-    match y - x {
-        del if del > 0 => 1,
-        del if del < 0 => -1,
-        _ => 0,
-    }
-}
-
 fn day14() {
     let input: Vec<Vec<Coord>> = include_str!("14.txt")
         .lines()
@@ -987,8 +975,8 @@ fn day14() {
     for row in input {
         for i in 0..row.len() - 1 {
             let step = Coord {
-                x: sign(row[i].x, row[i + 1].x),
-                y: sign(row[i].y, row[i + 1].y),
+                x: sign(row[i + 1].x - row[i].x),
+                y: sign(row[i + 1].y - row[i].y),
             };
 
             let mut tmp = row[i];
