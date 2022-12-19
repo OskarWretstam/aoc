@@ -879,13 +879,113 @@ fn day11() {
     println!("d11p2: {}", p2[0] * p2[1]);
 }
 
+fn bfs(map: &Vec<Vec<i32>>, start: Coord, end: Coord) -> Option<i32> {
+    let max_x: i32 = map.len() as i32 - 1;
+    let max_y: i32 = map[0].len() as i32 - 1;
+
+    let permutations = vec![
+        Coord { x: 1, y: 0 },
+        Coord { x: -1, y: 0 },
+        Coord { x: 0, y: 1 },
+        Coord { x: 0, y: -1 },
+    ];
+
+    let mut visited: HashSet<Coord> = HashSet::new();
+    let mut to_visit: VecDeque<Coord> = VecDeque::new();
+    let mut prev: HashMap<Coord, Coord> = HashMap::new();
+
+    to_visit.push_back(start);
+
+    while let Some(coord) = to_visit.pop_front() {
+        if visited.contains(&coord) {
+            continue;
+        }
+        visited.insert(coord);
+
+        for permutation in &permutations {
+            let next_coord = coord + *permutation;
+            if next_coord.x <= max_x // Boundaries
+                && next_coord.y <= max_y
+                && next_coord.x >= 0
+                && next_coord.y >= 0
+                && map[next_coord.x as usize][next_coord.y as usize] // Hight condition
+                    - map[coord.x as usize][coord.y as usize]
+                    <= 1
+                && !visited.contains(&next_coord)
+            // Gandalf
+            {
+                to_visit.push_back(next_coord);
+                prev.insert(next_coord, coord);
+            }
+        }
+    }
+
+    let mut path: Vec<Coord> = Vec::new();
+    let mut at = end;
+    while prev.contains_key(&at) {
+        path.push(at);
+        at = prev[&at];
+    }
+
+    if at == start {
+        return Some(path.len() as i32);
+    }
+
+    None
+}
+
+fn day12() {
+    let mut input: Vec<Vec<i32>> = include_str!("12.txt")
+        .lines()
+        .map(|line| line.chars().map(|c| c as i32 - 'a' as i32).collect())
+        .collect();
+
+    let mut start = Coord { x: 0, y: 0 };
+    let mut end = Coord { x: 0, y: 0 };
+
+    for i in 0..input.len() {
+        for j in 0..input[0].len() {
+            if input[i][j] == 'S' as i32 - 'a' as i32 {
+                start = Coord {
+                    x: i as i32,
+                    y: j as i32,
+                };
+                input[i][j] = 0;
+            }
+
+            if input[i][j] == 'E' as i32 - 'a' as i32 {
+                end = Coord {
+                    x: i as i32,
+                    y: j as i32,
+                };
+                input[i][j] = 'z' as i32 - 'a' as i32;
+            }
+        }
+    }
+    println!("d12p1: {}", bfs(&input, start, end).unwrap());
+
+    let mut lengths: Vec<i32> = Vec::new();
+    for i in 0..input.len() {
+        for j in 0..input[0].len() {
+            if input[i][j] == 0 {
+                start = Coord {
+                    x: i as i32,
+                    y: j as i32,
+                };
+                if let Some(length) = bfs(&input, start, end) {
+                    lengths.push(length);
+                }
+            }
+        }
+    }
+    println!("d12p2: {}", lengths.iter().min().unwrap());
+}
+
 fn sign(x: i32, y: i32) -> i32 {
-    if y - x > 0 {
-        1
-    } else if y - x < 0 {
-        -1
-    } else {
-        0
+    match y - x {
+        del if del > 0 => 1,
+        del if del < 0 => -1,
+        _ => 0,
     }
 }
 
@@ -1108,9 +1208,7 @@ fn day18() {
             {
                 if input.contains_key(&next_coord) {
                     surface_area_p2 += 1;
-                }
-                else
-                {
+                } else {
                     coords_to_visit.push_back(next_coord);
                 }
             }
@@ -1133,7 +1231,7 @@ fn main() {
     day09();
     day10();
     day11();
-    // day12() pathfinding algorithm
+    day12();
     // day13() recursive decent, json parser
     day14();
     // day15() some kind of interval overlap in 2D
