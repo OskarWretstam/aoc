@@ -703,31 +703,6 @@ fn day10() {
     }
 }
 
-// #[allow(dead_code)]
-// struct Monkey<F, G>
-// where
-//     F: Fn(i32) -> i32,
-//     G: Fn(i32) -> i32,
-// {
-//     items: VecDeque<i32>,
-//     operation: F,
-//     test: G,
-// }
-//
-// impl<F, G> Monkey<F, G>
-// where
-//     F: Fn(i32) -> i32,
-//     G: Fn(i32) -> i32,
-// {
-//     fn new(items: VecDeque<i32>, operation: F, test: G) -> Self {
-//         Self {
-//             items,
-//             operation,
-//             test,
-//         }
-//     }
-// }
-
 #[allow(dead_code)]
 struct Monkey {
     items: VecDeque<usize>,
