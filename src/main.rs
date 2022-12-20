@@ -529,6 +529,10 @@ impl Coord {
         max(d1, d2)
     }
 
+    fn manhattan_distance(self, other: Coord) -> i32 {
+        (self.x - other.x).abs() + (self.y - other.y).abs()
+    }
+
     fn to_unit(self) -> Coord {
         Coord {
             x: sign(self.x),
@@ -1043,6 +1047,104 @@ fn day14() {
     println!("d14p2: {}", added_sand);
 }
 
+fn day15() {
+    let input: Vec<(Coord, Coord)> = include_str!("15.txt")
+        .lines()
+        .map(|line| {
+            let words: Vec<i32> = line
+                .split(' ')
+                .filter(|word| word.contains('='))
+                .map(|word| {
+                    word.replace("x=", "")
+                        .replace("y=", "")
+                        .replace([':', ','], "")
+                        .parse()
+                        .unwrap()
+                })
+                .collect();
+            (
+                Coord {
+                    x: words[0],
+                    y: words[1],
+                },
+                Coord {
+                    x: words[2],
+                    y: words[3],
+                },
+            )
+        })
+        .collect();
+
+    let the_row = 2000000;
+    let mut covered_coordinates: Vec<i32> = Vec::new();
+
+    for (sensor, beacon) in &input {
+        let sb_distance = sensor.manhattan_distance(*beacon);
+        let line_distance = (sensor.y - the_row).abs();
+        if line_distance > sb_distance {
+            continue;
+        }
+
+        let offset = sb_distance - line_distance;
+        for i in sensor.x - offset..=sensor.x + offset {
+            covered_coordinates.push(i);
+        }
+    }
+
+    covered_coordinates.sort();
+    covered_coordinates.dedup();
+    for (_, beacon) in &input {
+        if beacon.y == the_row {
+            covered_coordinates.retain(|&x| x != beacon.x);
+        }
+    }
+
+    println!("d15p1: {}", covered_coordinates.len());
+
+    let mut position = Coord { x: 0, y: 0 };
+    for the_row in 0..4000000 {
+        let mut covered_ranges: Vec<(i32, i32)> = Vec::new();
+
+        for (sensor, beacon) in &input {
+            let sb_distance = sensor.manhattan_distance(*beacon);
+            let line_distance = (sensor.y - the_row).abs();
+            if line_distance > sb_distance {
+                continue;
+            }
+
+            let offset = sb_distance - line_distance;
+            covered_ranges.push((sensor.x - offset, sensor.x + offset));
+        }
+
+        let mut pos_x = 0;
+        while pos_x < 4000000 && !covered_ranges.is_empty() {
+            let mut found_new_range = false;
+
+            for i in 0..covered_ranges.len() {
+                let (start, stop) = covered_ranges[i];
+                if pos_x >= start && pos_x <= stop {
+                    pos_x = stop;
+                    found_new_range = true;
+                    covered_ranges.remove(i);
+                    pos_x += 1;
+                    break;
+                }
+            }
+
+            if !found_new_range {
+                position.x = pos_x;
+                position.y = the_row;
+                break;
+            }
+        }
+    }
+
+    println!(
+        "d15p2: {}",
+        position.x as usize * 4000000 + position.y as usize
+    );
+}
+
 // fn day17() {
 //     let _input: Vec<char> = include_str!("17.txt").trim().chars().collect();
 //
@@ -1182,6 +1284,31 @@ fn day18() {
     println!("d18p2: {}", surface_area_p2);
 }
 
+fn day20() {
+    let input: Vec<i32> = include_str!("20.txt")
+        .lines()
+        .map(|line| line.parse::<i32>().unwrap())
+        .collect();
+
+    let mut output: Vec<usize> = (0..input.len()).collect();
+    for (i, &x) in input.iter().enumerate() {
+        let pos = output.iter().position(|&y| y == i).unwrap();
+        output.remove(pos);
+        let new_i = (pos as i64 + x as i64).rem_euclid(output.len() as i64) as usize;
+        output.insert(new_i, i);
+    }
+    let start_zero_index = input.iter().position(|&i| i == 0).unwrap();
+    let end_zero_index = output.iter().position(|&i| i == start_zero_index).unwrap();
+
+    println!(
+        "d20p1: {}",
+        [1000, 2000, 3000]
+            .iter()
+            .map(|i| input[output[(end_zero_index + i) % output.len()]])
+            .sum::<i32>()
+    );
+}
+
 fn main() {
     day01();
     day02();
@@ -1197,9 +1324,10 @@ fn main() {
     day12();
     // day13() recursive decent, json parser
     day14();
-    // day15() some kind of interval overlap in 2D
+    day15();
     // day16() don't know yet, can I always go to largest?
     // day17() tetris
     day18();
     // day19() age of empires
+    day20();
 }
