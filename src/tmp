@@ -1,0 +1,1332 @@
+use std::cmp::max;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::ops::Add;
+use std::ops::Sub;
+
+fn day01() {
+    let input = include_str!("1.txt");
+
+    let mut calories = Vec::new();
+    let mut tmp = 0;
+
+    for line in input.lines() {
+        let val = line.parse::<i32>();
+
+        if let Ok(value) = val {
+            tmp += value;
+        } else {
+            calories.push(tmp);
+            tmp = 0;
+        }
+    }
+
+    calories.sort();
+    calories.reverse();
+    println!("d01p1: {}", calories[0]);
+    println!("d01p2: {:?}", &calories[..=2].iter().sum::<i32>());
+}
+
+fn win_multiplier(theirs: i8, ours: i8) -> i8 {
+    let diff = ours - theirs;
+    (match diff {
+        2 => -1,
+        -2 => 1,
+        _ => diff,
+    }) + 1
+}
+
+fn score(theirs: i8, ours: i8) -> i32 {
+    (win_multiplier(theirs, ours) * 3 + (ours + 1)) as i32
+}
+
+fn pick_play(theirs: i8, ours: i8) -> (i8, i8) {
+    (
+        theirs,
+        match theirs {
+            0 => (ours + 2) % 3,
+            2 => (ours + 1) % 3,
+            _ => ours,
+        },
+    )
+}
+
+fn day02() {
+    let input: Vec<(i8, i8)> = include_str!("2.txt")
+        .lines()
+        .map(|line| {
+            let mut iter = line.split_whitespace();
+            (
+                (iter.next().unwrap().as_bytes()[0] - b'A') as i8,
+                (iter.next().unwrap().as_bytes()[0] - b'X') as i8,
+            )
+        })
+        .collect();
+
+    let total_score: i32 = input
+        .iter()
+        .map(|(theirs, ours)| score(*theirs, *ours))
+        .sum();
+
+    println!("d02p1: {}", total_score);
+
+    let new_score: i32 = input
+        .iter()
+        .map(|(theirs, ours)| pick_play(*theirs, *ours))
+        .map(|(theirs, ours)| score(theirs, ours))
+        .sum();
+
+    println!("d02p2: {}", new_score);
+}
+
+fn day03() {
+    let input: i32 = include_str!("3.txt")
+        .lines()
+        .map(|line| {
+            let (first, second) = line.split_at(line.len() / 2);
+            let first: HashSet<char> = first.chars().collect();
+            let second: HashSet<char> = second.chars().collect();
+            let common = first.intersection(&second).next().unwrap().to_owned();
+            common
+        })
+        .map(|c| {
+            if c.is_lowercase() {
+                c as i32 - 96
+            } else {
+                c as i32 - 64 + 26
+            }
+        })
+        .sum();
+    println!("d03p1: {}", input);
+
+    let input: i32 = include_str!("3.txt")
+        .lines()
+        .collect::<Vec<&str>>()
+        .chunks(3)
+        .map(|chunk| {
+            let first: HashSet<char> = chunk[0].chars().collect();
+            let second: HashSet<char> = chunk[1].chars().collect();
+            let third: HashSet<char> = chunk[2].chars().collect();
+            let intersection: Vec<char> = (&(&first & &second) & &third).into_iter().collect();
+            intersection[0]
+        })
+        .map(|c| {
+            if c.is_lowercase() {
+                c as i32 - 96
+            } else {
+                c as i32 - 64 + 26
+            }
+        })
+        .sum();
+
+    println!("d03p2: {}", input);
+}
+
+fn day04() {
+    let input: i32 = include_str!("4.txt")
+        .lines()
+        .map(|line| {
+            let mut interval = Vec::new();
+            for s in line.split(',') {
+                for ss in s.split('-') {
+                    interval.push(ss.parse::<i32>().unwrap());
+                }
+            }
+
+            if interval[0] <= interval[2] && interval[1] >= interval[3] {
+                return 1;
+            }
+            if interval[2] <= interval[0] && interval[3] >= interval[1] {
+                return 1;
+            }
+            0
+        })
+        .sum();
+
+    println!("d04p1: {:?}", input);
+
+    let input: i32 = include_str!("4.txt")
+        .lines()
+        .map(|line| {
+            let mut interval = Vec::new();
+            for s in line.split(',') {
+                for ss in s.split('-') {
+                    interval.push(ss.parse::<i32>().unwrap());
+                }
+            }
+
+            if interval[0] >= interval[2] && interval[0] <= interval[3] {
+                return 1;
+            }
+
+            if interval[1] >= interval[2] && interval[1] <= interval[3] {
+                return 1;
+            }
+
+            if interval[2] >= interval[0] && interval[2] <= interval[1] {
+                return 1;
+            }
+
+            if interval[3] >= interval[0] && interval[3] <= interval[1] {
+                return 1;
+            }
+
+            0
+        })
+        .sum();
+
+    println!("d04p2: {:?}", input);
+}
+
+fn day05() {
+    let input = include_str!("5.txt");
+    let mut stacks: Vec<Vec<char>> = Vec::new();
+
+    // Prepare the stacks...
+    for _ in 0..9 {
+        stacks.push(Vec::new());
+    }
+
+    for line in input.lines() {
+        if line.contains(" 1  ") {
+            for stack in &mut stacks {
+                stack.reverse();
+            }
+            break;
+        }
+
+        let chars: Vec<char> = line.chars().collect();
+        let mut stack = 0;
+        for i in (1..chars.len()).step_by(4) {
+            if chars[i].is_uppercase() {
+                stacks[stack].push(chars[i]);
+            }
+            stack += 1;
+        }
+    }
+
+    // preform the moves p1
+    let mut p1_stacks = stacks.clone();
+    for line in input.lines().skip_while(|tmp| !tmp.contains("move")) {
+        let instr: Vec<usize> = line
+            .split_ascii_whitespace()
+            .map(|col| match col.parse::<usize>() {
+                Ok(a) => a,
+                _ => 0,
+            })
+            .collect();
+
+        for _ in 0..instr[1] {
+            let tmp = p1_stacks[instr[3] - 1].pop().unwrap();
+            p1_stacks[instr[5] - 1].push(tmp);
+        }
+    }
+
+    print!("d05p1: ");
+    for stack in p1_stacks {
+        print!("{}", stack.last().unwrap());
+    }
+    println!();
+
+    // preform the moves p2
+    let mut p2_stacks = stacks.clone();
+    for line in input.lines().skip_while(|tmp| !tmp.contains("move")) {
+        let instr: Vec<usize> = line
+            .split_ascii_whitespace()
+            .map(|col| match col.parse::<usize>() {
+                Ok(a) => a,
+                _ => 0,
+            })
+            .collect();
+
+        let mut tmp_vec = Vec::new();
+        for _ in 0..instr[1] {
+            tmp_vec.push(p2_stacks[instr[3] - 1].pop().unwrap());
+        }
+
+        for _ in 0..instr[1] {
+            p2_stacks[instr[5] - 1].push(tmp_vec.pop().unwrap());
+        }
+    }
+
+    print!("d05p2: ");
+    for stack in p2_stacks {
+        print!("{}", stack.last().unwrap());
+    }
+    println!();
+}
+
+fn day06() {
+    let input: Vec<char> = include_str!("6.txt").chars().collect();
+
+    let mut tmp: VecDeque<char> = VecDeque::new();
+    let mut count = 0;
+
+    for c in input.clone() {
+        tmp.push_back(c);
+        count += 1;
+        if tmp.len() == 4 {
+            let mut tmptmp = Vec::from(tmp.clone());
+            tmp.pop_front();
+            tmptmp.sort();
+            tmptmp.dedup();
+            if tmptmp.len() == 4 {
+                break;
+            }
+        }
+    }
+
+    println!("d06p1: {}", count);
+
+    let mut tmp: VecDeque<char> = VecDeque::new();
+    let mut count = 0;
+
+    for c in input {
+        tmp.push_back(c);
+        count += 1;
+        if tmp.len() == 14 {
+            let mut tmptmp = Vec::from(tmp.clone());
+            tmp.pop_front();
+            tmptmp.sort();
+            tmptmp.dedup();
+            if tmptmp.len() == 14 {
+                break;
+            }
+        }
+    }
+
+    println!("d06p2: {}", count);
+}
+
+#[allow(dead_code)]
+struct Directory {
+    name: String,
+    size: usize,
+    parent: usize,
+}
+
+fn day07() {
+    let input: Vec<&str> = include_str!("7.txt")
+        .lines()
+        .filter(|line| !line.contains("$ ls"))
+        .filter(|line| !line.contains("dir"))
+        .collect();
+
+    let mut filesystem = vec![Directory {
+        name: "/".to_string(),
+        size: 0,
+        parent: 0,
+    }];
+
+    let root_index = 0;
+    let mut current_index = 0;
+
+    for cmd in input {
+        if cmd.contains("cd ") {
+            let tmp = cmd.split(' ').collect::<Vec<&str>>();
+            let path = tmp[2];
+
+            match path {
+                "/" => current_index = root_index,
+                ".." => current_index = filesystem[current_index].parent,
+                a_directory => {
+                    filesystem.push(Directory {
+                        name: String::from(a_directory),
+                        size: 0,
+                        parent: current_index,
+                    });
+                    current_index = filesystem.len() - 1;
+                }
+            }
+        } else {
+            let tmp = cmd.split(' ').collect::<Vec<&str>>();
+            let size = tmp[0].parse::<usize>().unwrap();
+
+            let mut ix = current_index;
+            loop {
+                filesystem[ix].size += size;
+                if ix == root_index {
+                    break;
+                }
+                ix = filesystem[ix].parent;
+            }
+        }
+    }
+
+    let p1: usize = filesystem
+        .iter()
+        .map(|dir| dir.size)
+        .filter(|size| *size <= 100000)
+        .sum();
+
+    println!("d07p1: {}", p1);
+
+    let free_space = 70000000 - filesystem[0].size;
+    let required_space = 30000000 - free_space;
+
+    let p2 = filesystem
+        .iter()
+        .map(|d| d.size)
+        .filter(|size| *size >= required_space)
+        .min()
+        .unwrap();
+
+    println!("d07p2: {}", p2);
+}
+
+fn is_visible(data: &[Vec<u32>], x: usize, y: usize, side: usize) -> i32 {
+    let height = data[x][y];
+    let mut tmp;
+    let mut seen_directions = 4;
+
+    tmp = x;
+    while tmp > 0 {
+        tmp -= 1;
+        if data[tmp][y] >= height {
+            seen_directions -= 1;
+            break;
+        }
+    }
+
+    tmp = x;
+    while tmp < side - 1 {
+        tmp += 1;
+        if data[tmp][y] >= height {
+            seen_directions -= 1;
+            break;
+        }
+    }
+
+    tmp = y;
+    while tmp > 0 {
+        tmp -= 1;
+        if data[x][tmp] >= height {
+            seen_directions -= 1;
+            break;
+        }
+    }
+
+    tmp = y;
+    while tmp < side - 1 {
+        tmp += 1;
+        if data[x][tmp] >= height {
+            seen_directions -= 1;
+            break;
+        }
+    }
+
+    if seen_directions == 0 {
+        return 0;
+    }
+
+    1
+}
+
+fn scenic_score(data: &[Vec<u32>], x: usize, y: usize, side: usize) -> usize {
+    let height = data[x][y];
+    let mut tmp;
+    let mut score = 1;
+
+    tmp = x;
+    while tmp > 0 {
+        tmp -= 1;
+        if data[tmp][y] >= height {
+            break;
+        }
+    }
+    score *= x - tmp;
+
+    tmp = x;
+    while tmp < side - 1 {
+        tmp += 1;
+        if data[tmp][y] >= height {
+            break;
+        }
+    }
+    score *= tmp - x;
+
+    tmp = y;
+    while tmp > 0 {
+        tmp -= 1;
+        if data[x][tmp] >= height {
+            break;
+        }
+    }
+    score *= y - tmp;
+
+    tmp = y;
+    while tmp < side - 1 {
+        tmp += 1;
+        if data[x][tmp] >= height {
+            break;
+        }
+    }
+    score *= tmp - y;
+
+    score
+}
+
+fn day08() {
+    let input = include_str!("8.txt");
+    let mut data: Vec<Vec<u32>> = Vec::new();
+
+    for line in input.lines() {
+        data.push(Vec::new());
+        for c in line.chars() {
+            let end = data.len() - 1;
+            data[end].push(c.to_digit(10).unwrap());
+        }
+    }
+
+    let mut visible_count: i32 = 0;
+    for x in 0..data.len() {
+        for y in 0..data[x].len() {
+            visible_count += is_visible(&data, x, y, data.len());
+        }
+    }
+    println!("d08p1: {}", visible_count);
+
+    let mut scenic_scores: Vec<usize> = Vec::new();
+    for x in 0..data.len() {
+        for y in 0..data[x].len() {
+            scenic_scores.push(scenic_score(&data, x, y, data.len()));
+        }
+    }
+    println!("d08p2: {}", scenic_scores.iter().max().unwrap());
+}
+
+fn sign(x: i32) -> i32 {
+    match x {
+        x if x > 0 => 1,
+        x if x < 0 => -1,
+        _ => 0,
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+struct Coord {
+    x: i32,
+    y: i32,
+}
+
+impl Add for Coord {
+    type Output = Coord;
+
+    fn add(self, _rhs: Coord) -> Coord {
+        Coord {
+            x: self.x + _rhs.x,
+            y: self.y + _rhs.y,
+        }
+    }
+}
+
+impl Coord {
+    fn distance(self, other: Coord) -> i32 {
+        let d1 = (self.x - other.x).abs();
+        let d2 = (self.y - other.y).abs();
+        max(d1, d2)
+    }
+
+    fn manhattan_distance(self, other: Coord) -> i32 {
+        (self.x - other.x).abs() + (self.y - other.y).abs()
+    }
+
+    fn to_unit(self) -> Coord {
+        Coord {
+            x: sign(self.x),
+            y: sign(self.y),
+        }
+    }
+}
+
+impl Sub for Coord {
+    type Output = Coord;
+
+    fn sub(self, _rhs: Coord) -> Coord {
+        Coord {
+            x: self.x - _rhs.x,
+            y: self.y - _rhs.y,
+        }
+    }
+}
+
+#[allow(dead_code)]
+struct Move {
+    direction: Coord,
+    number_of_steps: i32,
+}
+
+fn day09() {
+    let input = include_str!("9.txt");
+
+    let mut head = Coord { x: 0, y: 0 };
+    let mut tail = Coord { x: 0, y: 0 };
+
+    let mut tail_visited: Vec<Coord> = Vec::new();
+    tail_visited.push(tail);
+    let mut moves: Vec<Move> = Vec::new();
+
+    for line in input.lines() {
+        let tmp: Vec<&str> = line.split(' ').collect();
+        let direction = match tmp[0] {
+            "R" => Coord { x: 1, y: 0 },
+            "U" => Coord { x: 0, y: 1 },
+            "L" => Coord { x: -1, y: 0 },
+            "D" => Coord { x: 0, y: -1 },
+            _ => panic!["Parsed unknown direction: {}", tmp[0]],
+        };
+
+        moves.push(Move {
+            direction,
+            number_of_steps: tmp[1].parse::<i32>().unwrap(),
+        });
+    }
+
+    for m in &moves {
+        for _ in 0..m.number_of_steps {
+            head = head + m.direction;
+            if head.distance(tail) > 1 {
+                tail = tail + (head - tail).to_unit();
+                if !tail_visited.contains(&tail) {
+                    tail_visited.push(tail);
+                }
+            }
+        }
+    }
+
+    println!("d09p1: {}", tail_visited.len());
+
+    let mut knots: Vec<Coord> = Vec::new();
+    for _ in 0..10 {
+        knots.push(Coord { x: 0, y: 0 });
+    }
+
+    let mut tail_visited: Vec<Coord> = Vec::new();
+    tail_visited.push(knots[0]);
+
+    for m in &moves {
+        for _ in 0..m.number_of_steps {
+            knots[0] = knots[0] + m.direction;
+            for i in 1..knots.len() {
+                if knots[i - 1].distance(knots[i]) > 1 {
+                    knots[i] = knots[i] + (knots[i - 1] - knots[i]).to_unit();
+                }
+            }
+            if !tail_visited.contains(&knots[knots.len() - 1]) {
+                tail_visited.push(knots[knots.len() - 1]);
+            }
+        }
+    }
+
+    println!("d09p2: {}", tail_visited.len());
+}
+
+fn day10() {
+    let input = include_str!("10.txt");
+    let mut x = 1;
+    let mut signal: Vec<i32> = Vec::new();
+    let mut cycle = 0;
+    let mut to_add;
+    let stops = vec![20, 60, 100, 140, 180, 220];
+    let mut stop_ix = 0;
+
+    for line in input.lines() {
+        match line {
+            "noop" => {
+                cycle += 1;
+                to_add = 0;
+            }
+            _ => {
+                cycle += 2;
+                let tmp: Vec<&str> = line.split(' ').collect();
+                to_add = tmp[1].parse::<i32>().unwrap();
+            }
+        };
+
+        if stop_ix < stops.len() && cycle >= stops[stop_ix] {
+            signal.push(stops[stop_ix] * x);
+            x += to_add;
+            stop_ix += 1;
+        } else {
+            x += to_add;
+        }
+    }
+
+    println!("d10p1: {}", signal.into_iter().sum::<i32>());
+
+    x = 1;
+    cycle = 0;
+    let mut pixels: Vec<char> = Vec::new();
+
+    for line in input.lines() {
+        match line {
+            "noop" => {
+                if cycle >= x - 1 && cycle <= x + 1 {
+                    pixels.push('#');
+                } else {
+                    pixels.push('.');
+                }
+                cycle += 1;
+                cycle %= 40;
+            }
+            _ => {
+                if cycle >= x - 1 && cycle <= x + 1 {
+                    pixels.push('#');
+                } else {
+                    pixels.push('.');
+                }
+                cycle += 1;
+                cycle %= 40;
+
+                if cycle >= x - 1 && cycle <= x + 1 {
+                    pixels.push('#');
+                } else {
+                    pixels.push('.');
+                }
+                cycle += 1;
+                cycle %= 40;
+
+                let tmp: Vec<&str> = line.split(' ').collect();
+                x += tmp[1].parse::<i32>().unwrap();
+            }
+        }
+    }
+
+    println!("d10p2:");
+    for j in 0..6 {
+        for i in 0..40 {
+            print!("{}", pixels[(j * 40) + i]);
+        }
+        println!();
+    }
+}
+
+#[allow(dead_code)]
+struct Monkey {
+    items: VecDeque<usize>,
+    inspection_count: usize,
+    pub operation: Box<dyn Fn(usize) -> usize>,
+    pub test: Box<dyn Fn(usize) -> usize>,
+}
+
+#[allow(dead_code)]
+impl Monkey {
+    fn new(
+        items: VecDeque<usize>,
+        inspection_count: usize,
+        operation: impl Fn(usize) -> usize + 'static,
+        test: impl Fn(usize) -> usize + 'static,
+    ) -> Self {
+        Self {
+            items,
+            inspection_count,
+            operation: Box::new(operation),
+            test: Box::new(test),
+        }
+    }
+}
+
+fn parse_initial_monkeys(input: Vec<&'static str>) -> (Vec<Monkey>, usize) {
+    let mut monkeys = Vec::new();
+    let mut worry_level_limiter: usize = 1;
+    // Parse..
+    for monkey in input {
+        let mut iter = monkey.lines();
+        iter.next().unwrap(); // Monkey numbers, don't care
+
+        let starting_items = iter
+            .next()
+            .unwrap()
+            .trim()
+            .split(' ')
+            .skip_while(|word| word.chars().next().unwrap().is_alphabetic())
+            .map(|word| word.replace(',', ""))
+            .map(|word| word.parse::<usize>().unwrap());
+
+        // Construct closure for operation
+        let tmp: Vec<&str> = iter
+            .next()
+            .unwrap()
+            .trim()
+            .split(' ')
+            .skip_while(|word| word.chars().next().unwrap().is_alphabetic())
+            .collect();
+
+        let operation: Box<dyn Fn(usize) -> usize> = match tmp[tmp.len() - 2] {
+            "+" => {
+                if tmp[tmp.len() - 1] == "old" {
+                    Box::new(|worry_level: usize| worry_level + worry_level)
+                } else {
+                    Box::new(move |worry_level: usize| {
+                        worry_level + tmp[tmp.len() - 1].parse::<usize>().unwrap()
+                    })
+                }
+            }
+            "*" => {
+                if tmp[tmp.len() - 1] == "old" {
+                    Box::new(|worry_level: usize| worry_level * worry_level)
+                } else {
+                    Box::new(move |worry_level: usize| {
+                        worry_level * tmp[tmp.len() - 1].parse::<usize>().unwrap()
+                    })
+                }
+            }
+            _ => {
+                panic!("Operation: unknown operand {}", tmp[tmp.len() - 2])
+            }
+        };
+
+        // Construct closure for test
+        let tmp: Vec<usize> = iter
+            .map(|line| line.trim())
+            .map(|line| {
+                let words: Vec<&str> = line.split(' ').collect();
+                words[words.len() - 1].parse::<usize>().unwrap()
+            })
+            .collect();
+
+        worry_level_limiter *= tmp[0];
+
+        let test = Box::new(move |worry_level| {
+            if worry_level % tmp[0] == 0 {
+                tmp[1]
+            } else {
+                tmp[2]
+            }
+        });
+
+        monkeys.push(Monkey {
+            items: VecDeque::from_iter(starting_items),
+            inspection_count: 0,
+            operation,
+            test,
+        });
+    }
+    (monkeys, worry_level_limiter)
+}
+
+fn day11() {
+    let input: Vec<&str> = include_str!("11.txt").split("\n\n").collect();
+    let (mut monkeys_p1, _) = parse_initial_monkeys(input);
+    for _ in 0..20 {
+        for i in 0..monkeys_p1.len() {
+            while let Some(mut item) = monkeys_p1[i].items.pop_front() {
+                monkeys_p1[i].inspection_count += 1;
+                item = (monkeys_p1[i].operation)(item);
+                item /= 3;
+                let ix = (monkeys_p1[i].test)(item);
+                monkeys_p1[ix].items.push_back(item);
+            }
+        }
+    }
+
+    let mut p1: Vec<usize> = monkeys_p1
+        .iter()
+        .map(|monkey| monkey.inspection_count)
+        .collect::<Vec<usize>>();
+    p1.sort_by(|a, b| b.cmp(a));
+
+    println!("d11p1: {}", p1[0] * p1[1]);
+
+    let input: Vec<&str> = include_str!("11.txt").split("\n\n").collect();
+
+    let (mut monkeys_p2, worry_level_limiter) = parse_initial_monkeys(input);
+    for _ in 0..10000 {
+        for i in 0..monkeys_p2.len() {
+            while let Some(mut item) = monkeys_p2[i].items.pop_front() {
+                monkeys_p2[i].inspection_count += 1;
+                item = (monkeys_p2[i].operation)(item);
+                item %= worry_level_limiter;
+                let ix = (monkeys_p2[i].test)(item);
+                monkeys_p2[ix].items.push_back(item);
+            }
+        }
+    }
+
+    let mut p2: Vec<usize> = monkeys_p2
+        .iter()
+        .map(|monkey| monkey.inspection_count)
+        .collect::<Vec<usize>>();
+    p2.sort_by(|a, b| b.cmp(a));
+
+    println!("d11p2: {}", p2[0] * p2[1]);
+}
+
+fn bfs(map: &Vec<Vec<i32>>, start: Coord, end: Coord) -> Option<i32> {
+    let max_x: i32 = map.len() as i32 - 1;
+    let max_y: i32 = map[0].len() as i32 - 1;
+
+    let permutations = vec![
+        Coord { x: 1, y: 0 },
+        Coord { x: -1, y: 0 },
+        Coord { x: 0, y: 1 },
+        Coord { x: 0, y: -1 },
+    ];
+
+    let mut visited: HashSet<Coord> = HashSet::new();
+    let mut to_visit: VecDeque<Coord> = VecDeque::new();
+    let mut prev: HashMap<Coord, Coord> = HashMap::new();
+
+    to_visit.push_back(start);
+
+    while let Some(coord) = to_visit.pop_front() {
+        if visited.contains(&coord) {
+            continue;
+        }
+        visited.insert(coord);
+
+        for permutation in &permutations {
+            let next_coord = coord + *permutation;
+            if next_coord.x <= max_x // Boundaries
+                && next_coord.y <= max_y
+                && next_coord.x >= 0
+                && next_coord.y >= 0
+                && map[next_coord.x as usize][next_coord.y as usize] // Hight condition
+                    - map[coord.x as usize][coord.y as usize]
+                    <= 1
+                && !visited.contains(&next_coord)
+            // Gandalf
+            {
+                to_visit.push_back(next_coord);
+                prev.insert(next_coord, coord);
+            }
+        }
+    }
+
+    let mut path: Vec<Coord> = Vec::new();
+    let mut at = end;
+    while prev.contains_key(&at) {
+        path.push(at);
+        at = prev[&at];
+    }
+
+    if at == start {
+        return Some(path.len() as i32);
+    }
+
+    None
+}
+
+fn day12() {
+    let mut input: Vec<Vec<i32>> = include_str!("12.txt")
+        .lines()
+        .map(|line| line.chars().map(|c| c as i32 - 'a' as i32).collect())
+        .collect();
+
+    let mut start = Coord { x: 0, y: 0 };
+    let mut end = Coord { x: 0, y: 0 };
+
+    for i in 0..input.len() {
+        for j in 0..input[0].len() {
+            if input[i][j] == 'S' as i32 - 'a' as i32 {
+                start = Coord {
+                    x: i as i32,
+                    y: j as i32,
+                };
+                input[i][j] = 0;
+            }
+
+            if input[i][j] == 'E' as i32 - 'a' as i32 {
+                end = Coord {
+                    x: i as i32,
+                    y: j as i32,
+                };
+                input[i][j] = 'z' as i32 - 'a' as i32;
+            }
+        }
+    }
+    println!("d12p1: {}", bfs(&input, start, end).unwrap());
+
+    let mut lengths: Vec<i32> = Vec::new();
+    for i in 0..input.len() {
+        for j in 0..input[0].len() {
+            if input[i][j] == 0 {
+                start = Coord {
+                    x: i as i32,
+                    y: j as i32,
+                };
+                if let Some(length) = bfs(&input, start, end) {
+                    lengths.push(length);
+                }
+            }
+        }
+    }
+    println!("d12p2: {}", lengths.iter().min().unwrap());
+}
+
+fn day14() {
+    let input: Vec<Vec<Coord>> = include_str!("14.txt")
+        .lines()
+        .map(|line| {
+            line.split(" -> ")
+                .collect::<Vec<&str>>()
+                .into_iter()
+                .map(|coord| {
+                    let tmp = coord.split(',').collect::<Vec<&str>>();
+                    Coord {
+                        x: tmp[0].parse::<i32>().unwrap(),
+                        y: tmp[1].parse::<i32>().unwrap(),
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
+    let mut largest_y = 0;
+    let mut blocked: HashMap<Coord, bool> = std::collections::HashMap::new();
+    for row in input {
+        for i in 0..row.len() - 1 {
+            let step = Coord {
+                x: sign(row[i + 1].x - row[i].x),
+                y: sign(row[i + 1].y - row[i].y),
+            };
+
+            let mut tmp = row[i];
+            while tmp != row[i + 1] {
+                blocked.insert(tmp, true);
+                if tmp.y > largest_y {
+                    largest_y = tmp.y;
+                }
+                tmp = tmp + step;
+            }
+            blocked.insert(tmp, true);
+            if tmp.y > largest_y {
+                largest_y = tmp.y;
+            }
+        }
+    }
+
+    const DOWN: Coord = Coord { x: 0, y: 1 };
+    const LEFT: Coord = Coord { x: -1, y: 1 };
+    const RIGHT: Coord = Coord { x: 1, y: 1 };
+
+    let mut p1_done = false;
+    let mut p1 = 0;
+    let floor = largest_y + 2;
+    let mut added_sand = 0;
+    loop {
+        let mut sand = Coord { x: 500, y: 0 };
+        added_sand += 1;
+
+        loop {
+            let mut moved = false;
+            if !blocked.contains_key(&(sand + DOWN)) {
+                sand = sand + DOWN;
+                moved = true;
+            } else if !blocked.contains_key(&(sand + LEFT)) {
+                sand = sand + LEFT;
+                moved = true;
+            } else if !blocked.contains_key(&(sand + RIGHT)) {
+                sand = sand + RIGHT;
+                moved = true;
+            }
+
+            if !moved && sand.y == 0 {
+                break;
+            }
+
+            if !moved || sand.y == floor - 1 {
+                blocked.insert(sand, true);
+                break;
+            }
+
+            if sand.y == largest_y && !p1_done {
+                p1 = added_sand - 1;
+                p1_done = true;
+            }
+        }
+
+        if sand.y == 0 {
+            break;
+        }
+    }
+
+    println!("d14p1: {}", p1);
+    println!("d14p2: {}", added_sand);
+}
+
+fn day15() {
+    let input: Vec<(Coord, Coord)> = include_str!("15.txt")
+        .lines()
+        .map(|line| {
+            let words: Vec<i32> = line
+                .split(' ')
+                .filter(|word| word.contains('='))
+                .map(|word| {
+                    word.replace("x=", "")
+                        .replace("y=", "")
+                        .replace([':', ','], "")
+                        .parse()
+                        .unwrap()
+                })
+                .collect();
+            (
+                Coord {
+                    x: words[0],
+                    y: words[1],
+                },
+                Coord {
+                    x: words[2],
+                    y: words[3],
+                },
+            )
+        })
+        .collect();
+
+    let the_row = 2000000;
+    let mut covered_coordinates: Vec<i32> = Vec::new();
+
+    for (sensor, beacon) in &input {
+        let sb_distance = sensor.manhattan_distance(*beacon);
+        let line_distance = (sensor.y - the_row).abs();
+        if line_distance > sb_distance {
+            continue;
+        }
+
+        let offset = sb_distance - line_distance;
+        for i in sensor.x - offset..=sensor.x + offset {
+            covered_coordinates.push(i);
+        }
+    }
+
+    covered_coordinates.sort();
+    covered_coordinates.dedup();
+    for (_, beacon) in &input {
+        if beacon.y == the_row {
+            covered_coordinates.retain(|&x| x != beacon.x);
+        }
+    }
+
+    println!("d15p1: {}", covered_coordinates.len());
+
+    let mut position = Coord { x: 0, y: 0 };
+    for the_row in 0..4000000 {
+        let mut covered_ranges: Vec<(i32, i32)> = Vec::new();
+
+        for (sensor, beacon) in &input {
+            let sb_distance = sensor.manhattan_distance(*beacon);
+            let line_distance = (sensor.y - the_row).abs();
+            if line_distance > sb_distance {
+                continue;
+            }
+
+            let offset = sb_distance - line_distance;
+            covered_ranges.push((sensor.x - offset, sensor.x + offset));
+        }
+
+        let mut pos_x = 0;
+        while pos_x < 4000000 && !covered_ranges.is_empty() {
+            let mut found_new_range = false;
+
+            for i in 0..covered_ranges.len() {
+                let (start, stop) = covered_ranges[i];
+                if pos_x >= start && pos_x <= stop {
+                    pos_x = stop;
+                    found_new_range = true;
+                    covered_ranges.remove(i);
+                    pos_x += 1;
+                    break;
+                }
+            }
+
+            if !found_new_range {
+                position.x = pos_x;
+                position.y = the_row;
+                break;
+            }
+        }
+    }
+
+    println!(
+        "d15p2: {}",
+        position.x as usize * 4000000 + position.y as usize
+    );
+}
+
+// fn day17() {
+//     let _input: Vec<char> = include_str!("17.txt").trim().chars().collect();
+//
+//     println!("d17p1: {}", 0);
+//     println!("d17p2: {}", 0);
+// }
+
+#[allow(dead_code)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+struct Coord3D {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+impl Add for Coord3D {
+    type Output = Coord3D;
+
+    fn add(self, _rhs: Coord3D) -> Coord3D {
+        Coord3D {
+            x: self.x + _rhs.x,
+            y: self.y + _rhs.y,
+            z: self.z + _rhs.z,
+        }
+    }
+}
+
+fn day18() {
+    let mut min = Coord3D {
+        x: 20,
+        y: 20,
+        z: 20,
+    };
+
+    let mut max = Coord3D { x: 0, y: 0, z: 0 };
+
+    let input: HashMap<Coord3D, bool> = include_str!("18.txt")
+        .lines()
+        .map(|line| {
+            let tmp: Vec<&str> = line.split(',').collect();
+
+            let tmpx = tmp[0].parse::<i32>().unwrap();
+            let tmpy = tmp[1].parse::<i32>().unwrap();
+            let tmpz = tmp[2].parse::<i32>().unwrap();
+
+            if tmpx > max.x {
+                max.x = tmpx;
+            }
+            if tmpy > max.y {
+                max.y = tmpy;
+            }
+            if tmpz > max.z {
+                max.z = tmpz;
+            }
+
+            if tmpx < min.x {
+                min.x = tmpx;
+            }
+            if tmpy < min.y {
+                min.y = tmpy;
+            }
+            if tmpz < min.z {
+                min.z = tmpz;
+            }
+
+            (
+                Coord3D {
+                    x: tmpx,
+                    y: tmpy,
+                    z: tmpz,
+                },
+                true,
+            )
+        })
+        .collect();
+
+    let permutations: Vec<Coord3D> = vec![
+        Coord3D { x: 1, y: 0, z: 0 },
+        Coord3D { x: 0, y: 1, z: 0 },
+        Coord3D { x: 0, y: 0, z: 1 },
+        Coord3D { x: -1, y: 0, z: 0 },
+        Coord3D { x: 0, y: -1, z: 0 },
+        Coord3D { x: 0, y: 0, z: -1 },
+    ];
+
+    let mut surface_area_p1 = 0;
+    for coord in input.keys() {
+        for permutation in &permutations {
+            if !input.contains_key(&(*coord + *permutation)) {
+                surface_area_p1 += 1;
+            }
+        }
+    }
+
+    let mut surface_area_p2 = 0;
+
+    min = min
+        + Coord3D {
+            x: -1,
+            y: -1,
+            z: -1,
+        };
+
+    max = max + Coord3D { x: 1, y: 1, z: 1 };
+
+    // Act like steam in description and fill everything not blocked by rock
+    let mut coords_to_visit: VecDeque<Coord3D> = VecDeque::new();
+    coords_to_visit.push_back(min);
+    let mut coords_visited: HashMap<Coord3D, bool> = HashMap::new();
+
+    while let Some(coord) = coords_to_visit.pop_front() {
+        if coords_visited.contains_key(&coord) {
+            continue;
+        }
+
+        coords_visited.insert(coord, false);
+
+        for permutation in &permutations {
+            let next_coord = coord + *permutation;
+            if next_coord.x >= min.x
+                && next_coord.x <= max.x
+                && next_coord.y >= min.y
+                && next_coord.y <= max.y
+                && next_coord.z >= min.z
+                && next_coord.z <= max.z
+            {
+                if input.contains_key(&next_coord) {
+                    surface_area_p2 += 1;
+                } else {
+                    coords_to_visit.push_back(next_coord);
+                }
+            }
+        }
+    }
+
+    println!("d18p1: {}", surface_area_p1);
+    println!("d18p2: {}", surface_area_p2);
+}
+
+fn day20() {
+    let input: Vec<i32> = include_str!("20.txt")
+        .lines()
+        .map(|line| line.parse::<i32>().unwrap())
+        .collect();
+
+    let mut output: Vec<usize> = (0..input.len()).collect();
+    for (i, &x) in input.iter().enumerate() {
+        let pos = output.iter().position(|&y| y == i).unwrap();
+        output.remove(pos);
+        let new_i = (pos as i64 + x as i64).rem_euclid(output.len() as i64) as usize;
+        output.insert(new_i, i);
+    }
+    let start_zero_index = input.iter().position(|&i| i == 0).unwrap();
+    let end_zero_index = output.iter().position(|&i| i == start_zero_index).unwrap();
+
+    println!(
+        "d20p1: {}",
+        [1000, 2000, 3000]
+            .iter()
+            .map(|i| input[output[(end_zero_index + i) % output.len()]])
+            .sum::<i32>()
+    );
+}
+
+
+    day01();
+    day02();
+    day03();
+    day04();
+    day05();
+    day06();
+    day07();
+    day08();
+    day09();
+    day10();
+    day11();
+    day12();
+    // day13() recursive decent, json parser
+    day14();
+    day15();
+    // day16() don't know yet, can I always go to largest?
+    // day17() tetris
+    day18();
+    // day19() age of empires
+    day20();
